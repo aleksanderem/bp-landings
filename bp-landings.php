@@ -2,14 +2,14 @@
 /**
  * Plugin Name: BP Landings
  * Description: Landing pages custom post type with Elementor support and root-level URLs
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Alex M.
  * Text Domain: bp-landings
  */
 
 defined('ABSPATH') || exit;
 
-define('BP_LANDINGS_VERSION', '1.0.0');
+define('BP_LANDINGS_VERSION', '1.0.1');
 define('BP_LANDINGS_PATH', plugin_dir_path(__FILE__));
 define('BP_LANDINGS_URL', plugin_dir_url(__FILE__));
 
