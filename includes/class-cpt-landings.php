@@ -54,7 +54,9 @@ class BP_Landings_CPT {
 
     public static function remove_slug_from_permalink($post_link, $post) {
         if ($post->post_type === 'bp_landing' && $post->post_status === 'publish') {
-            return home_url('/' . $post->post_name . '/');
+            // get_page_uri returns full hierarchical path: parent/child
+            $uri = get_page_uri($post);
+            return home_url('/' . $uri . '/');
         }
         return $post_link;
     }
@@ -76,34 +78,34 @@ class BP_Landings_CPT {
             $slug = $path;
         }
 
-        if (empty($slug) || strpos($slug, '/') !== false) {
+        if (empty($slug)) {
             return $query_vars;
         }
 
-        if (get_page_by_path($slug)) {
+        // Check if a WP page matches this path (pages take priority)
+        if (get_page_by_path($slug, OBJECT, 'page')) {
             return $query_vars;
         }
 
-        // Don't interfere if a leadership post already claims this slug
-        global $wpdb;
-        $leadership_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT ID FROM $wpdb->posts WHERE post_name = %s AND post_type = 'leadership' AND post_status = 'publish' LIMIT 1",
-            $slug
-        ));
-        if ($leadership_id) {
-            return $query_vars;
+        // For single-segment slugs, check leadership posts (they also use root URLs)
+        if (strpos($slug, '/') === false) {
+            global $wpdb;
+            $leadership_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT ID FROM $wpdb->posts WHERE post_name = %s AND post_type = 'leadership' AND post_status = 'publish' LIMIT 1",
+                $slug
+            ));
+            if ($leadership_id) {
+                return $query_vars;
+            }
         }
 
-        $landing_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT ID FROM $wpdb->posts WHERE post_name = %s AND post_type = 'bp_landing' AND post_status = 'publish' LIMIT 1",
-            $slug
-        ));
+        // Check if a bp_landing matches this path (supports hierarchical paths like parent/child)
+        $landing = get_page_by_path($slug, OBJECT, 'bp_landing');
 
-        if ($landing_id) {
+        if ($landing) {
             $query_vars = [
-                'post_type'  => 'bp_landing',
-                'bp_landing' => $slug,
-                'name'       => $slug,
+                'post_type' => 'bp_landing',
+                'page_id'   => $landing->ID,
             ];
         }
 
