@@ -54,11 +54,30 @@ class BP_Landings_CPT {
 
     public static function remove_slug_from_permalink($post_link, $post) {
         if ($post->post_type === 'bp_landing' && $post->post_status === 'publish') {
-            // get_page_uri returns full hierarchical path: parent/child
-            $uri = get_page_uri($post);
-            return home_url('/' . $uri . '/');
+            $custom_path = get_field('landing_custom_path', $post->ID);
+            if ($custom_path) {
+                return home_url('/' . trim($custom_path, '/') . '/');
+            }
+            return home_url('/' . get_page_uri($post) . '/');
         }
         return $post_link;
+    }
+
+    /**
+     * Find a landing by custom path meta value.
+     */
+    private static function find_landing_by_custom_path($path) {
+        global $wpdb;
+        return $wpdb->get_var($wpdb->prepare(
+            "SELECT p.ID FROM $wpdb->posts p
+             INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id
+             WHERE pm.meta_key = 'landing_custom_path'
+               AND pm.meta_value = %s
+               AND p.post_type = 'bp_landing'
+               AND p.post_status = 'publish'
+             LIMIT 1",
+            $path
+        ));
     }
 
     public static function resolve_root_landing_request($query_vars) {
@@ -82,12 +101,12 @@ class BP_Landings_CPT {
             return $query_vars;
         }
 
-        // Check if a WP page matches this path (pages take priority)
+        // Pages take priority
         if (get_page_by_path($slug, OBJECT, 'page')) {
             return $query_vars;
         }
 
-        // For single-segment slugs, check leadership posts (they also use root URLs)
+        // Single-segment: leadership posts take priority
         if (strpos($slug, '/') === false) {
             global $wpdb;
             $leadership_id = $wpdb->get_var($wpdb->prepare(
@@ -99,13 +118,21 @@ class BP_Landings_CPT {
             }
         }
 
-        // Check if a bp_landing matches this path (supports hierarchical paths like parent/child)
-        $landing = get_page_by_path($slug, OBJECT, 'bp_landing');
+        // Check custom path first (e.g. law-enforcement/contact-us)
+        $landing_id = self::find_landing_by_custom_path($slug);
 
-        if ($landing) {
+        // Fall back to hierarchical slug match
+        if (!$landing_id) {
+            $landing = get_page_by_path($slug, OBJECT, 'bp_landing');
+            if ($landing) {
+                $landing_id = $landing->ID;
+            }
+        }
+
+        if ($landing_id) {
             $query_vars = [
                 'post_type' => 'bp_landing',
-                'page_id'   => $landing->ID,
+                'page_id'   => $landing_id,
             ];
         }
 

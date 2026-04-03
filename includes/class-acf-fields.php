@@ -17,6 +17,16 @@ class BP_Landings_ACF_Fields {
             'title'    => 'Landing Details',
             'fields'   => [
                 [
+                    'key'          => 'field_landing_custom_path',
+                    'label'        => 'Custom URL Path',
+                    'name'         => 'landing_custom_path',
+                    'type'         => 'text',
+                    'placeholder'  => 'law-enforcement/contact-us',
+                    'instructions' => 'Custom URL path without leading/trailing slashes. Leave empty to use the default slug.',
+                    'prepend'      => '/',
+                    'append'       => '/',
+                ],
+                [
                     'key'           => 'field_landing_source',
                     'label'         => 'Source',
                     'name'          => 'landing_source',
